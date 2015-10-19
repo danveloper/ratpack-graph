@@ -1,0 +1,24 @@
+apply plugin: 'idea'
+
+ext {
+  ratpackVersion = "1.1.0"
+}
+
+allprojects {
+  group = "com.danveloper.ratpack.graph"
+
+  apply plugin: 'java'
+
+  repositories {
+    jcenter()
+  }
+
+  dependencies {
+    compile "io.ratpack:ratpack-core:${ratpackVersion}"
+    compile "io.ratpack:ratpack-guice:${ratpackVersion}"
+    testCompile "org.codehaus.groovy:groovy-all:2.4.3"
+    testCompile "io.ratpack:ratpack-groovy-test:${ratpackVersion}"
+    testCompile 'cglib:cglib-nodep:3.1'
+    testCompile 'org.spockframework:spock-core:1.0-groovy-2.4'
+ }
+}
