@@ -2,14 +2,14 @@ package com.danveloper.ratpack.graph;
 
 import ratpack.exec.Operation;
 import ratpack.exec.Promise;
+import ratpack.server.Service;
 
-import java.util.List;
 import java.util.Set;
 
 /**
  * A persistent repository for storing and accessing {@link Node}s.
  */
-public interface NodeRepository {
+public interface NodeRepository extends Service {
 
   /**
    * Persists the provided node.

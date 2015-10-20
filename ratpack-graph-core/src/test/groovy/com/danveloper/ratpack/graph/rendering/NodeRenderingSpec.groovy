@@ -10,7 +10,6 @@ import com.google.common.collect.Sets
 import ratpack.exec.Promise
 import ratpack.func.Action
 import ratpack.guice.Guice
-import ratpack.render.Renderer
 import ratpack.test.embed.EmbeddedApp
 import spock.lang.AutoCleanup
 import spock.lang.Specification
