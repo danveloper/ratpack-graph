@@ -6,48 +6,20 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
-import com.lambdaworks.redis.RedisAsyncConnection;
-import com.lambdaworks.redis.RedisClient;
-import com.lambdaworks.redis.RedisURI;
 import ratpack.exec.Execution;
 import ratpack.exec.Operation;
 import ratpack.exec.Promise;
-import ratpack.server.StartEvent;
 import ratpack.stream.Streams;
 
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class RedisNodeRepository implements NodeRepository {
-
-  private final RedisGraphModule.Config config;
-  private RedisClient redisClient;
-  private RedisAsyncConnection<String, String> connection;
+public class RedisNodeRepository extends RedisSupport implements NodeRepository {
 
   @Inject
   RedisNodeRepository(RedisGraphModule.Config config) {
-    this.config = config;
-  }
-
-  @Override
-  public void onStart(StartEvent e) {
-    this.redisClient = new RedisClient(getRedisURI());
-    this.connection = redisClient.connectAsync();
-  }
-
-  private RedisURI getRedisURI() {
-    RedisURI.Builder builder = RedisURI.Builder.redis(config.getHost());
-
-    if (config.getPassword() != null) {
-      builder.withPassword(config.getPassword());
-    }
-
-    if (config.getPort() != null) {
-      builder.withPort(config.getPort());
-    }
-
-    return builder.build();
+    super(config);
   }
 
   @Override
@@ -219,15 +191,6 @@ public class RedisNodeRepository implements NodeRepository {
       }
     }
     return p == null ? Promise.value(null) : p;
-  }
-
-  private String getCompositeId(NodeProperties props) {
-    return String.format("%s:%s:%s", props.getId(), props.getClassifier().getType(), props.getClassifier().getCategory());
-  }
-
-  private NodeProperties destructureCompositeId(String compositeId) {
-    String[] parts = compositeId.split(":");
-    return new NodeProperties(parts[0], new NodeClassifier(parts[1], parts[2]));
   }
 
   private Operation indexClassifier(NodeClassifier classifier, String id) {

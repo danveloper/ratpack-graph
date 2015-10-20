@@ -1,12 +1,24 @@
 package com.danveloper.ratpack.graph.redis;
 
+import com.danveloper.ratpack.graph.GraphModule;
+import com.danveloper.ratpack.graph.NodeDataRepository;
+import com.danveloper.ratpack.graph.NodeRepository;
+import com.google.inject.AbstractModule;
+import com.google.inject.Scopes;
+import com.google.inject.util.Modules;
 import ratpack.guice.ConfigurableModule;
 
 public class RedisGraphModule extends ConfigurableModule<RedisGraphModule.Config> {
 
   @Override
   protected void configure() {
-
+    install(Modules.override(new GraphModule()).with(new AbstractModule() {
+      @Override
+      protected void configure() {
+        binder().bind(NodeRepository.class).to(RedisNodeRepository.class).in(Scopes.SINGLETON);
+        binder().bind(NodeDataRepository.class).to(RedisNodeDataRepository.class).in(Scopes.SINGLETON);
+      }
+    }));
   }
 
   public static class Config {

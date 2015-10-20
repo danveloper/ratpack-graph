@@ -3,39 +3,14 @@ package com.danveloper.ratpack.graph.redis
 import com.danveloper.ratpack.graph.Node
 import com.danveloper.ratpack.graph.NodeClassifier
 import com.danveloper.ratpack.graph.NodeProperties
-import com.lambdaworks.redis.RedisClient
-import com.lambdaworks.redis.RedisConnection
-import ratpack.test.exec.ExecHarness
-import spock.lang.AutoCleanup
 import spock.lang.Shared
-import spock.lang.Specification
-import redis.embedded.RedisServer
 
-import static com.danveloper.ratpack.graph.redis.PortFinder.nextFree
-
-class RedisNodeRepositorySpec extends Specification {
-  static int port = nextFree()
-
-  static NodeClassifier TEST_GEN = new NodeClassifier("test", "general")
-
-  @AutoCleanup("stop")
-  @Shared
-  RedisServer redisServer = new RedisServer(port)
-
+class RedisNodeRepositorySpec extends RedisRepositorySpec {
   @Shared
   def repo = new RedisNodeRepository(new RedisGraphModule.Config(port: port))
 
-  @AutoCleanup
-  ExecHarness execControl = ExecHarness.harness()
-
   def setupSpec() {
-    redisServer.start()
     repo.onStart(null)
-  }
-
-  def cleanup() {
-    RedisConnection<String, String> conn = new RedisClient("localhost", port).connect()
-    conn.flushall()
   }
 
   void "should be able to store and retrieve a node"() {

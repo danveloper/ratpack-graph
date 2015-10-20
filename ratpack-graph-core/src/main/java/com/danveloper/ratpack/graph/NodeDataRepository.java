@@ -2,11 +2,12 @@ package com.danveloper.ratpack.graph;
 
 import ratpack.exec.Operation;
 import ratpack.exec.Promise;
+import ratpack.server.Service;
 
 /**
  * A repository for storing data objects that are associated with a {@link Node}
  */
-public interface NodeDataRepository {
+public interface NodeDataRepository extends Service {
 
   /**
    * Retrieves the data object that is stored for the node represented by the provided properties.
