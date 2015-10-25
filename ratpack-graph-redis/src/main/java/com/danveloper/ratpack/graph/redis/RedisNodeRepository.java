@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 public class RedisNodeRepository extends RedisSupport implements NodeRepository {
 
   @Inject
-  RedisNodeRepository(RedisGraphModule.Config config) {
+  public RedisNodeRepository(RedisGraphModule.Config config) {
     super(config);
   }
 

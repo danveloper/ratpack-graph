@@ -1,4 +1,14 @@
+buildscript {
+  repositories { 
+    jcenter() 
+  }
+  dependencies {
+    classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:2.2.3'
+  }
+}
+
 apply plugin: 'idea'
+apply plugin: 'artifactory'
 
 ext {
   ratpackVersion = "1.1.0"
@@ -6,8 +16,12 @@ ext {
 
 allprojects {
   group = "com.danveloper.ratpack.graph"
+  version = "0.1-SNAPSHOT"
 
   apply plugin: 'groovy'
+  apply plugin: 'maven'
+  apply plugin: 'maven-publish'
+  apply plugin: 'artifactory'
 
   repositories {
     jcenter()
@@ -21,4 +35,41 @@ allprojects {
     testCompile 'cglib:cglib-nodep:3.1'
     testCompile 'org.spockframework:spock-core:1.0-groovy-2.4'
  }
+
+  artifactory {
+    contextUrl = 'http://oss.jfrog.org'
+  }
+
+  artifactoryPublish { task ->
+    rootProject.artifactory {
+      publish {
+        repository {
+          repoKey = version.endsWith("-SNAPSHOT") ? 'oss-snapshot-local' : 'oss-release-local'
+          gradle.taskGraph.whenReady { taskGraph ->
+            if (taskGraph.hasTask(task)) {
+              username = bintrayUser
+              password = bintrayKey
+            }
+          }
+        }
+      }
+    }
+  }
+
+  task sourceJar(type: Jar) {
+    from sourceSets.main.allJava
+  }
+
+  publishing {
+    publications {
+      mavenJava(MavenPublication) {
+        from components.java
+
+        artifact sourceJar {
+          classifier "sources"
+        }
+      }
+
+    }
+  }
 }

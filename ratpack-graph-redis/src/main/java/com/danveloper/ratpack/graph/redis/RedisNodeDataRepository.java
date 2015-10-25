@@ -19,7 +19,7 @@ public class RedisNodeDataRepository extends RedisSupport implements NodeDataRep
   private final ObjectMapper mapper;
 
   @Inject
-  RedisNodeDataRepository(RedisGraphModule.Config config, ObjectMapper mapper) {
+  public RedisNodeDataRepository(RedisGraphModule.Config config, ObjectMapper mapper) {
     super(config);
     this.mapper = mapper.copy().enableDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL, JsonTypeInfo.As.PROPERTY);
   }
