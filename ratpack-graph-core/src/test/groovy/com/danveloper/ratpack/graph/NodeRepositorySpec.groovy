@@ -117,4 +117,19 @@ class NodeRepositorySpec extends Specification {
     !nodes.contains(node1.properties)
     nodes[0] == node2.properties
   }
+
+  void "should be able to read a node without updating its lastAccessTime"() {
+    when:
+    def lastAccessTime = execControl.yieldSingle {
+      repo.getOrCreate(PROPS)
+    }.valueOrThrow.lastAccessTime
+
+    and:
+    def upd = execControl.yieldSingle {
+      repo.read(PROPS)
+    }.valueOrThrow
+
+    then:
+    upd.lastAccessTime == lastAccessTime
+  }
 }

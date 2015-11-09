@@ -33,8 +33,15 @@ public class InMemoryNodeRepository implements NodeRepository {
     Node node = nodePropertiesIndex.containsKey(nodeProperties) ?
         nodePropertiesIndex.get(nodeProperties) : null;
     if (node != null) {
-      save0(node); // update lastAccessTime
+      node = save0(node); // update lastAccessTime
     }
+    return Promise.value(node);
+  }
+
+  @Override
+  public Promise<Node> read(NodeProperties nodeProperties) {
+    Node node = nodePropertiesIndex.containsKey(nodeProperties) ?
+        nodePropertiesIndex.get(nodeProperties) : null;
     return Promise.value(node);
   }
 
@@ -95,7 +102,7 @@ public class InMemoryNodeRepository implements NodeRepository {
     }
   }
 
-  private void save0(Node node) {
+  private Node save0(Node node) {
     if (node != null && node.getProperties() != null && node.getProperties().getId() != null) {
       long accessTime = System.currentTimeMillis();
       Node updated = new Node(node.getProperties(), node.getEdge(), accessTime);
@@ -106,6 +113,7 @@ public class InMemoryNodeRepository implements NodeRepository {
       if (!nodeClassifierIndex.get(node.getProperties().getClassifier()).contains(node.getProperties())) {
         nodeClassifierIndex.get(node.getProperties().getClassifier()).add(node.getProperties());
       }
+      return updated;
     } else {
       throw new IllegalStateException("Somebody tried to insert an empty node");
     }

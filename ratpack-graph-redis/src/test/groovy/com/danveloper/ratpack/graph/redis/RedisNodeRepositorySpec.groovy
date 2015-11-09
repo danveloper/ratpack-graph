@@ -177,4 +177,22 @@ class RedisNodeRepositorySpec extends RedisRepositorySpec {
     !nodes.contains(node1.properties)
     nodes[0] == node2.properties
   }
+
+  void "should be able to read a node without updating its lastAccessTime"() {
+    setup:
+    def props = new NodeProperties("id1", TEST_GEN)
+
+    when:
+    def lastAccessTime = execControl.yieldSingle {
+      repo.getOrCreate(props)
+    }.valueOrThrow.lastAccessTime
+
+    and:
+    def upd = execControl.yieldSingle {
+      repo.read(props)
+    }.valueOrThrow
+
+    then:
+    upd.lastAccessTime == lastAccessTime
+  }
 }

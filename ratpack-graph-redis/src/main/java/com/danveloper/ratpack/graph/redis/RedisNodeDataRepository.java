@@ -27,14 +27,18 @@ public class RedisNodeDataRepository extends RedisSupport implements NodeDataRep
   @Override
   public <T> Promise<T> get(NodeProperties properties) {
     return hget("data:all", getCompositeId(properties)).map(json -> {
-      JsonNode jsonNode = mapper.readTree(json);
-      JsonNode classNode = jsonNode.get("@class");
-      if (classNode.isNull()) {
-        throw new RuntimeException("Could not extract @class property from stored json");
+      if (json != null) {
+        JsonNode jsonNode = mapper.readTree(json);
+        JsonNode classNode = jsonNode.get("@class");
+        if (classNode.isNull()) {
+          throw new RuntimeException("Could not extract @class property from stored json");
+        } else {
+          String className = classNode.asText();
+          Class clazz = Class.forName(className);
+          return (T) mapper.readValue(json, clazz);
+        }
       } else {
-        String className = classNode.asText();
-        Class clazz = Class.forName(className);
-        return (T)mapper.readValue(json, clazz);
+        return null;
       }
     });
   }

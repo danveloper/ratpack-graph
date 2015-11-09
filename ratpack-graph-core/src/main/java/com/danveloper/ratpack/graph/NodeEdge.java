@@ -1,5 +1,6 @@
 package com.danveloper.ratpack.graph;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
 
 import java.util.Collections;
@@ -42,6 +43,7 @@ public class NodeEdge {
   /**
    * @return an immutable set of the relationship leaves
    */
+  @JsonProperty("relationships")
   public Set<NodeProperties> relationships() {
     return Collections.unmodifiableSet(this.relationships);
   }
@@ -49,6 +51,7 @@ public class NodeEdge {
   /**
    * @return an immutable set of the dependent leaves
    */
+  @JsonProperty("dependents")
   public Set<NodeProperties> dependents() {
     return Collections.unmodifiableSet(this.dependents);
   }

@@ -24,33 +24,7 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
 
   @Override
   public Operation save(Node node) {
-    String compositeId = getCompositeId(node.getProperties());
-    Operation storeOp = hset("node:all", compositeId, Long.toString(System.currentTimeMillis()));
-    Operation indexOp = indexClassifier(node.getProperties().getClassifier(), compositeId);
-    Promise<Set<String>> dependentMembersPromise = smembers(String.format("dependents:%s", compositeId));
-    Promise<Set<String>> relatedMembersPromise = smembers(String.format("relationships:%s", compositeId));
-    Promise<List<Operation>> addDependentsOpsPromise = dependentMembersPromise.flatMap(dependents ->
-            saddLeaf(compositeId, node.getEdge().dependents(), dependents, "dependents")
-    );
-    Promise<List<Operation>> addRelationshipOpsPromise = relatedMembersPromise.flatMap(relateds ->
-            saddLeaf(compositeId, node.getEdge().relationships(), relateds, "relationships")
-    );
-    Promise<List<Operation>> remDependentsOpsPromise = dependentMembersPromise.flatMap(dependents ->
-            sremLeaf(compositeId, node.getEdge().dependents(), dependents, "dependents")
-    );
-    Promise<List<Operation>> remRelationshipOpsPromise = relatedMembersPromise.flatMap(relateds ->
-            sremLeaf(compositeId, node.getEdge().relationships(), relateds, "relationships")
-    );
-
-    return storeOp.flatMap(indexOp.promise()).flatMap(o ->
-            addDependentsOpsPromise.flatMap(this::mapListOpsToPromise)
-    ).flatMap(o ->
-            addRelationshipOpsPromise.flatMap(this::mapListOpsToPromise)
-    ).flatMap(o ->
-            remDependentsOpsPromise.flatMap(this::mapListOpsToPromise)
-    ).flatMap(o ->
-            remRelationshipOpsPromise.flatMap(this::mapListOpsToPromise)
-    ).operation();
+    return save(node, true);
   }
 
   @Override
@@ -63,6 +37,11 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
   @Override
   public Promise<Node> get(NodeProperties properties) {
     return get(properties, true);
+  }
+
+  @Override
+  public Promise<Node> read(NodeProperties properties) {
+    return get(properties, false);
   }
 
   private Promise<Node> get(NodeProperties properties, boolean updateAccessTime) {
@@ -105,37 +84,48 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
   public Operation relate(Node left, Node right) {
     left.getEdge().addRelationship(right.getProperties());
     right.getEdge().addDependent(left.getProperties());
-    return save(left).flatMap(() -> save(right).promise()).operation();
+    return save(left, false).flatMap(() -> save(right, false).promise()).operation();
   }
 
   @Override
   public Operation remove(NodeProperties properties) {
+    String compositeId = getCompositeId(properties);
     return get(properties).flatMap(node -> {
-      List<Operation> updateDepOps = node.getEdge().dependents().stream()
-          .map(dependent ->
-                  get(dependent).flatMap(depNode -> {
-                    depNode.getEdge().removeRelationship(properties);
-                    return save(depNode).promise();
-                  }).operation()
-          )
-          .collect(Collectors.toList());
-      List<Operation> updateRelOps = node.getEdge().relationships().stream()
-          .map(related ->
-                  get(related).flatMap(relNode -> {
-                    relNode.getEdge().removeDependent(properties);
-                    return save(relNode).promise();
-                  }).operation()
-          )
-          .collect(Collectors.toList());
+      if (node != null) {
+        List<Operation> updateDepOps = node.getEdge().dependents().stream()
+            .map(dependent ->
+                    get(dependent).flatMap(depNode -> {
+                      if (depNode != null) {
+                        depNode.getEdge().removeRelationship(properties);
+                        return save(depNode).promise();
+                      } else {
+                        return hdel("node:all", getCompositeId(dependent)).operation().promise();
+                      }
+                    }).operation()
+            )
+            .collect(Collectors.toList());
+        List<Operation> updateRelOps = node.getEdge().relationships().stream()
+            .map(related ->
+                    get(related).flatMap(relNode -> {
+                      if (relNode != null) {
+                        relNode.getEdge().removeDependent(properties);
+                        return save(relNode).promise();
+                      } else {
+                        return hdel("node:all", getCompositeId(related)).operation().promise();
+                      }
+                    }).operation()
+            )
+            .collect(Collectors.toList());
 
-      Promise<Void> updateDepsPromise = mapListOpsToPromise(updateDepOps);
-      Promise<Void> updateRelsPromise = mapListOpsToPromise(updateRelOps);
+        Promise<Void> updateDepsPromise = mapListOpsToPromise(updateDepOps);
+        Promise<Void> updateRelsPromise = mapListOpsToPromise(updateRelOps);
 
-      String compositeId = getCompositeId(properties);
-
-      return updateDepsPromise.flatMap(v -> updateRelsPromise)
-          .flatMap(v -> removeIndexClassifier(properties.getClassifier(), compositeId).promise())
-          .flatMap(v -> hdel("node:all", compositeId));
+        return updateDepsPromise.flatMap(v -> updateRelsPromise)
+            .flatMap(v -> removeIndexClassifier(properties.getClassifier(), compositeId).promise())
+            .flatMap(v -> hdel("node:all", compositeId));
+      } else {
+        return hdel("node:all", compositeId);
+      }
     }).operation();
   }
 
@@ -163,6 +153,44 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
               }
             }).toList()
     ).operation();
+  }
+
+  private Operation save(Node node, boolean cleanupLeaves) {
+    String compositeId = getCompositeId(node.getProperties());
+    Operation storeOp = hset("node:all", compositeId, Long.toString(System.currentTimeMillis()));
+    Operation indexOp = indexClassifier(node.getProperties().getClassifier(), compositeId);
+    Promise<Set<String>> dependentMembersPromise = smembers(String.format("dependents:%s", compositeId));
+    Promise<Set<String>> relatedMembersPromise = smembers(String.format("relationships:%s", compositeId));
+    Promise<List<Operation>> addDependentsOpsPromise = dependentMembersPromise.flatMap(dependents ->
+            saddLeaf(compositeId, node.getEdge().dependents(), dependents, "dependents")
+    );
+    Promise<List<Operation>> addRelationshipOpsPromise = relatedMembersPromise.flatMap(relateds ->
+            saddLeaf(compositeId, node.getEdge().relationships(), relateds, "relationships")
+    );
+    Promise<List<Operation>> remDependentsOpsPromise = dependentMembersPromise.flatMap(dependents ->
+            sremLeaf(compositeId, node.getEdge().dependents(), dependents, "dependents")
+    );
+    Promise<List<Operation>> remRelationshipOpsPromise = relatedMembersPromise.flatMap(relateds ->
+            sremLeaf(compositeId, node.getEdge().relationships(), relateds, "relationships")
+    );
+
+    return storeOp.flatMap(indexOp.promise()).flatMap(o ->
+            addDependentsOpsPromise.flatMap(this::mapListOpsToPromise)
+    ).flatMap(o ->
+            addRelationshipOpsPromise.flatMap(this::mapListOpsToPromise)
+    ).flatMap(o -> {
+      if (cleanupLeaves) {
+        return remDependentsOpsPromise.flatMap(this::mapListOpsToPromise);
+      } else {
+        return Promise.value(null);
+      }
+    }).flatMap(o -> {
+      if (cleanupLeaves) {
+        return remRelationshipOpsPromise.flatMap(this::mapListOpsToPromise);
+      } else {
+        return Promise.value(null);
+      }
+    }).operation();
   }
 
   private Promise<List<Operation>> saddLeaf(String compositeId, Set<NodeProperties> edges, Set<String> relateds, String prefix) {
@@ -242,11 +270,7 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
             Futures.addCallback(connection.srem(key, id), new FutureCallback<Long>() {
               @Override
               public void onSuccess(Long result) {
-                if (result > 0) {
-                  d.success(true);
-                } else {
-                  d.error(new RuntimeException("Failed to srem data"));
-                }
+                d.success(true);
               }
 
               @Override
@@ -298,11 +322,7 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
             Futures.addCallback(connection.hdel(key, id), new FutureCallback<Long>() {
               @Override
               public void onSuccess(Long result) {
-                if (result > 0) {
-                  d.success(true);
-                } else {
-                  d.error(new RuntimeException("Failed to hdel data"));
-                }
+                d.success(true);
               }
 
               @Override

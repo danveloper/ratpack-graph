@@ -27,14 +27,7 @@ public class NodeCollectionJsonRenderer implements Renderer<NodeCollection> {
       NodeConverter<?> converter = findConverter(context, node);
       return converter.convert(node);
     }).collect(Collectors.toList());
-    Streams.flatYield(r -> {
-      int reqNum = new Long(r.getRequestNum()).intValue();
-      if (reqNum < promises.size()) {
-        return promises.get(reqNum);
-      } else {
-        return Promise.value(null);
-      }
-    }).toList().then(o -> {
+    Streams.publish(promises).flatMap(p -> p).toList().then(o -> {
       context.render(json(o));
     });
   }

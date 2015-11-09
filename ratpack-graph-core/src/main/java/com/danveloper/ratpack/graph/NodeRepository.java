@@ -35,6 +35,15 @@ public interface NodeRepository extends Service {
   Promise<Node> get(NodeProperties properties);
 
   /**
+   * Reads the fully hydrated {@link Node} for the provided {@link NodeProperties}.
+   * This is exactly the same as {@link #get(NodeProperties)}, which the difference that this method will not update a node's "lastAccessTime" field.
+   *
+   * @param properties the properties of the node
+   * @return a promise to the node represented by the provided {@link NodeProperties}
+   */
+  Promise<Node> read(NodeProperties properties);
+
+  /**
    * Performs a sort-of "update-or-insert" like functionality.
    * If a {@link Node} exists for the provided {@link NodeProperties}, then it is returned.
    * If a {@link Node} does not exist, then one is created and returned.

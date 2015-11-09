@@ -1,6 +1,7 @@
 package com.danveloper.ratpack.graph;
 
 import ratpack.exec.Promise;
+import ratpack.server.Service;
 
 /**
  * An interface for converting {@link Node} types to a representative object.
@@ -8,7 +9,7 @@ import ratpack.exec.Promise;
  *
  * @param <T> the representative object type
  */
-public interface NodeConverter<T> {
+public interface NodeConverter<T> extends Service {
 
   /**
    * The {@link NodeClassifier} for nodes that this converter is capable of converting.
