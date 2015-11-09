@@ -4,11 +4,13 @@ buildscript {
   }
   dependencies {
     classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:2.2.3'
+    classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.4'
   }
 }
 
 apply plugin: 'idea'
 apply plugin: 'artifactory'
+apply plugin: 'com.jfrog.bintray'
 
 ext {
   ratpackVersion = "1.1.0"
@@ -16,12 +18,12 @@ ext {
 
 allprojects {
   group = "com.danveloper.ratpack.graph"
-  version = "0.1-SNAPSHOT"
 
   apply plugin: 'groovy'
   apply plugin: 'maven'
   apply plugin: 'maven-publish'
   apply plugin: 'artifactory'
+  apply plugin: 'com.jfrog.bintray'
 
   repositories {
     jcenter()
@@ -54,6 +56,13 @@ allprojects {
         }
       }
     }
+  }
+
+  bintray {
+    user = bintrayUser
+    key = bintrayKey
+    pkg.repo = "maven"
+    pkg.name = "ratpack-graph"
   }
 
   task sourceJar(type: Jar) {
