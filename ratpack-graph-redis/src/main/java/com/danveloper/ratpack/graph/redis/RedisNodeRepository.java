@@ -89,7 +89,6 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
 
   @Override
   public Operation remove(NodeProperties properties) {
-    String compositeId = getCompositeId(properties);
     return get(properties).flatMap(node -> {
       if (node != null) {
         List<Operation> updateDepOps = node.getEdge().dependents().stream()
@@ -99,7 +98,7 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
                         depNode.getEdge().removeRelationship(properties);
                         return save(depNode).promise();
                       } else {
-                        return hdel("node:all", getCompositeId(dependent)).operation().promise();
+                        return purgeNode(dependent).operation().promise();
                       }
                     }).operation()
             )
@@ -111,7 +110,7 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
                         relNode.getEdge().removeDependent(properties);
                         return save(relNode).promise();
                       } else {
-                        return hdel("node:all", getCompositeId(related)).operation().promise();
+                        return purgeNode(related).operation().promise();
                       }
                     }).operation()
             )
@@ -120,13 +119,24 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
         Promise<Void> updateDepsPromise = mapListOpsToPromise(updateDepOps);
         Promise<Void> updateRelsPromise = mapListOpsToPromise(updateRelOps);
 
-        return updateDepsPromise.flatMap(v -> updateRelsPromise)
-            .flatMap(v -> removeIndexClassifier(properties.getClassifier(), compositeId).promise())
-            .flatMap(v -> hdel("node:all", compositeId));
+        return updateDepsPromise
+            .flatMap(v -> updateRelsPromise)
+            .flatMap(v -> purgeNode(properties));
       } else {
-        return hdel("node:all", compositeId);
+        return purgeNode(properties);
       }
     }).operation();
+  }
+
+  private Promise<Boolean> purgeNode(NodeProperties properties) {
+    String compositeId = getCompositeId(properties);
+    return removeIndexClassifier(properties.getClassifier(), properties.getId()).flatMap(() ->
+            hdel("node:all", compositeId)
+    ).flatMap(v ->
+      del(String.format("dependents:%s", compositeId))
+    ).flatMap(v ->
+      del(String.format("relationships:%s", compositeId))
+    );
   }
 
   @Override
@@ -209,16 +219,7 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
   }
 
   private Promise<Void> mapListOpsToPromise(List<Operation> ops) {
-    Promise<Void> p = null;
-    for (Operation op : ops) {
-      Promise<Void> opP = op.promise();
-      if (p == null) {
-        p = opP;
-      } else {
-        p = p.flatMap(v -> opP);
-      }
-    }
-    return p == null ? Promise.value(null) : p;
+    return Streams.publish(ops).flatMap(Operation::promise).toList().operation().promise();
   }
 
   private Operation indexClassifier(NodeClassifier classifier, String id) {
@@ -226,7 +227,7 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
   }
 
   private Operation removeIndexClassifier(NodeClassifier classifier, String id) {
-    return srem(getClassifierId(classifier), id);
+    return srem(getClassifierId(classifier), String.format("%s:%s:%s", id, classifier.getType(), classifier.getCategory()));
   }
 
   private String getClassifierId(NodeClassifier classifier) {
@@ -320,6 +321,22 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
   private Promise<Boolean> hdel(String key, String id) {
     return Promise.<Boolean>of(d ->
             Futures.addCallback(connection.hdel(key, id), new FutureCallback<Long>() {
+              @Override
+              public void onSuccess(Long result) {
+                d.success(true);
+              }
+
+              @Override
+              public void onFailure(Throwable t) {
+                d.error(new RuntimeException("Failed to hdel data", t));
+              }
+            })
+    );
+  }
+
+  private Promise<Boolean> del(String key) {
+    return Promise.<Boolean>of(d ->
+            Futures.addCallback(connection.del(key), new FutureCallback<Long>() {
               @Override
               public void onSuccess(Long result) {
                 d.success(true);
