@@ -2,7 +2,6 @@ package com.danveloper.ratpack.graph.redis
 
 import com.danveloper.ratpack.graph.NodeClassifier
 import com.lambdaworks.redis.RedisClient
-import com.lambdaworks.redis.RedisConnection
 import ratpack.test.exec.ExecHarness
 import redis.embedded.RedisServer
 import spock.lang.AutoCleanup
@@ -28,7 +27,7 @@ class RedisRepositorySpec extends Specification {
   }
 
   def cleanup() {
-    RedisConnection<String, String> conn = new RedisClient("localhost", port).connect()
-    conn.flushall()
+    def conn = new RedisClient("localhost", port).connect()
+    conn.sync().flushall()
   }
 }

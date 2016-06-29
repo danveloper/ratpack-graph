@@ -55,58 +55,49 @@ public class RedisNodeDataRepository extends RedisSupport implements NodeDataRep
   }
 
   private Promise<String> hget(String key, String id) {
-    return Promise.<String>of(d ->
-            Futures.addCallback(connection.hget(key, id), new FutureCallback<String>() {
-              @Override
-              public void onSuccess(String result) {
-                if (result != null) {
-                  d.success(result);
-                } else {
-                  d.success(null);
-                }
-              }
-
-              @Override
-              public void onFailure(Throwable t) {
-                d.error(new RuntimeException("Failed to hget data", t));
-              }
-            })
+    return Promise.<String>async(d ->
+        connection.hget(key, id).handleAsync((result, failure) -> {
+          if (failure == null) {
+            if (result != null) {
+              d.success(result);
+            } else {
+              d.success(null);
+            }
+          } else {
+            d.error(new RuntimeException("Failed to hget data", failure));
+          }
+          return null;
+        }, Execution.current().getEventLoop())
     );
   }
 
   private Operation hset(String key, String id, String val) {
-    return Promise.<Boolean>of(d ->
-            Futures.addCallback(connection.hset(key, id, val), new FutureCallback<Boolean>() {
-              @Override
-              public void onSuccess(Boolean result) {
-                d.success(true);
-              }
-
-              @Override
-              public void onFailure(Throwable t) {
-                d.error(new RuntimeException("Failed to hset data", t));
-              }
-            }, Execution.current().getEventLoop())
+    return Promise.<Boolean>async(d ->
+        connection.hset(key, id, val).handleAsync((result, failure) -> {
+          if (failure == null) {
+            d.success(result);
+          } else {
+            d.error(new RuntimeException("Failed to hset data", failure));
+          }
+          return null;
+        }, Execution.current().getEventLoop())
     ).operation();
   }
 
   private Promise<Boolean> hdel(String key, String id) {
-    return Promise.<Boolean>of(d ->
-            Futures.addCallback(connection.hdel(key, id), new FutureCallback<Long>() {
-              @Override
-              public void onSuccess(Long result) {
-                if (result > 0) {
-                  d.success(true);
-                } else {
-                  d.error(new RuntimeException("Failed to hdel data"));
-                }
-              }
-
-              @Override
-              public void onFailure(Throwable t) {
-                d.error(new RuntimeException("Failed to hdel data", t));
-              }
-            })
+    return Promise.<Boolean>async(d ->
+        connection.hdel(key, id).handleAsync( (result, failure) -> {
+          if (failure == null) {
+            if (result > 0) {
+              d.success(true);
+            } else {
+              d.error(new RuntimeException("Failed to hdel data"));
+            }
+          } else {
+            d.error(new RuntimeException("Failed to hdel data", failure));
+          }
+          return null;
+        }, Execution.current().getEventLoop())
     );
   }
 }

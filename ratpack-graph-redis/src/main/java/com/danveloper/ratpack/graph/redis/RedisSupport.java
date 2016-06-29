@@ -2,16 +2,16 @@ package com.danveloper.ratpack.graph.redis;
 
 import com.danveloper.ratpack.graph.NodeClassifier;
 import com.danveloper.ratpack.graph.NodeProperties;
-import com.lambdaworks.redis.RedisAsyncConnection;
 import com.lambdaworks.redis.RedisClient;
 import com.lambdaworks.redis.RedisURI;
+import com.lambdaworks.redis.api.async.RedisAsyncCommands;
+import com.lambdaworks.redis.codec.Utf8StringCodec;
 import ratpack.service.Service;
 import ratpack.service.StartEvent;
 
 public class RedisSupport implements Service {
   private final RedisGraphModule.Config config;
-  private RedisClient redisClient;
-  protected RedisAsyncConnection<String, String> connection;
+  protected RedisAsyncCommands<String, String> connection;
 
   RedisSupport(RedisGraphModule.Config config) {
     this.config = config;
@@ -19,8 +19,8 @@ public class RedisSupport implements Service {
 
   @Override
   public void onStart(StartEvent e) {
-    this.redisClient = new RedisClient(getRedisURI());
-    this.connection = redisClient.connectAsync();
+    RedisClient redisClient = RedisClient.create(getRedisURI());
+    this.connection = redisClient.connect(new Utf8StringCodec()).async();
   }
 
   private RedisURI getRedisURI() {

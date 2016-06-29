@@ -3,8 +3,6 @@ package com.danveloper.ratpack.graph.redis;
 import com.danveloper.ratpack.graph.*;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
 import ratpack.exec.Execution;
 import ratpack.exec.Operation;
@@ -30,7 +28,7 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
   @Override
   public Promise<Set<NodeProperties>> lookup(NodeClassifier classifier) {
     return smembers(String.format("classifier:%s:%s", classifier.getType(), classifier.getCategory())).flatMap(compositeIds ->
-            Promise.value(compositeIds.stream().map(this::destructureCompositeId).collect(Collectors.toSet()))
+        Promise.value(compositeIds.stream().map(this::destructureCompositeId).collect(Collectors.toSet()))
     );
   }
 
@@ -52,15 +50,15 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
         Promise<Set<String>> relatedMembersPromise = smembers(String.format("relationships:%s", compositeId));
 
         return dependentMembersPromise.flatMap(compositeIds ->
-                Promise.value(compositeIds.stream().map(this::destructureCompositeId).collect(Collectors.toSet()))
+            Promise.value(compositeIds.stream().map(this::destructureCompositeId).collect(Collectors.toSet()))
         ).flatMap(dependentNodeProperties ->
-                relatedMembersPromise.flatMap(compositeIds ->
-                        Promise.value(compositeIds.stream().map(this::destructureCompositeId).collect(Collectors.toSet()))
-                ).flatMap(relatedNodeProperties -> {
-                  NodeEdge edge = new NodeEdge(relatedNodeProperties, dependentNodeProperties);
-                  Node upd = new Node(properties, edge, updateAccessTime ? System.currentTimeMillis() : lastAccessTime);
-                  return save(upd).map(() -> upd);
-                })
+            relatedMembersPromise.flatMap(compositeIds ->
+                Promise.value(compositeIds.stream().map(this::destructureCompositeId).collect(Collectors.toSet()))
+            ).flatMap(relatedNodeProperties -> {
+              NodeEdge edge = new NodeEdge(relatedNodeProperties, dependentNodeProperties);
+              Node upd = new Node(properties, edge, updateAccessTime ? System.currentTimeMillis() : lastAccessTime);
+              return save(upd).map(() -> upd);
+            })
         );
       } else {
         return Promise.value(null);
@@ -93,26 +91,26 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
       if (node != null) {
         List<Operation> updateDepOps = node.getEdge().dependents().stream()
             .map(dependent ->
-                    get(dependent).flatMap(depNode -> {
-                      if (depNode != null) {
-                        depNode.getEdge().removeRelationship(properties);
-                        return save(depNode).promise();
-                      } else {
-                        return purgeNode(dependent).operation().promise();
-                      }
-                    }).operation()
+                get(dependent).flatMap(depNode -> {
+                  if (depNode != null) {
+                    depNode.getEdge().removeRelationship(properties);
+                    return save(depNode).promise();
+                  } else {
+                    return purgeNode(dependent).operation().promise();
+                  }
+                }).operation()
             )
             .collect(Collectors.toList());
         List<Operation> updateRelOps = node.getEdge().relationships().stream()
             .map(related ->
-                    get(related).flatMap(relNode -> {
-                      if (relNode != null) {
-                        relNode.getEdge().removeDependent(properties);
-                        return save(relNode).promise();
-                      } else {
-                        return purgeNode(related).operation().promise();
-                      }
-                    }).operation()
+                get(related).flatMap(relNode -> {
+                  if (relNode != null) {
+                    relNode.getEdge().removeDependent(properties);
+                    return save(relNode).promise();
+                  } else {
+                    return purgeNode(related).operation().promise();
+                  }
+                }).operation()
             )
             .collect(Collectors.toList());
 
@@ -131,11 +129,11 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
   private Promise<Boolean> purgeNode(NodeProperties properties) {
     String compositeId = getCompositeId(properties);
     return removeIndexClassifier(properties.getClassifier(), properties.getId()).flatMap(() ->
-            hdel("node:all", compositeId)
+        hdel("node:all", compositeId)
     ).flatMap(v ->
-      del(String.format("dependents:%s", compositeId))
+        del(String.format("dependents:%s", compositeId))
     ).flatMap(v ->
-      del(String.format("relationships:%s", compositeId))
+        del(String.format("relationships:%s", compositeId))
     );
   }
 
@@ -152,16 +150,16 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
         }
       }).toList();
     }).map(nodes ->
-      nodes.stream().filter(n -> System.currentTimeMillis() - n.getLastAccessTime() > ttl).collect(Collectors.toList())
+        nodes.stream().filter(n -> System.currentTimeMillis() - n.getLastAccessTime() > ttl).collect(Collectors.toList())
     ).flatMap(expiredNodes ->
-            Streams.flatYield(r -> {
-              int reqNum = new Long(r.getRequestNum()).intValue();
-              if (reqNum < expiredNodes.size()) {
-                return remove(expiredNodes.get(reqNum).getProperties()).promise();
-              } else {
-                return Promise.value(null);
-              }
-            }).toList()
+        Streams.flatYield(r -> {
+          int reqNum = new Long(r.getRequestNum()).intValue();
+          if (reqNum < expiredNodes.size()) {
+            return remove(expiredNodes.get(reqNum).getProperties()).promise();
+          } else {
+            return Promise.value(null);
+          }
+        }).toList()
     ).operation();
   }
 
@@ -172,22 +170,22 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
     Promise<Set<String>> dependentMembersPromise = smembers(String.format("dependents:%s", compositeId));
     Promise<Set<String>> relatedMembersPromise = smembers(String.format("relationships:%s", compositeId));
     Promise<List<Operation>> addDependentsOpsPromise = dependentMembersPromise.flatMap(dependents ->
-            saddLeaf(compositeId, node.getEdge().dependents(), dependents, "dependents")
+        saddLeaf(compositeId, node.getEdge().dependents(), dependents, "dependents")
     );
     Promise<List<Operation>> addRelationshipOpsPromise = relatedMembersPromise.flatMap(relateds ->
-            saddLeaf(compositeId, node.getEdge().relationships(), relateds, "relationships")
+        saddLeaf(compositeId, node.getEdge().relationships(), relateds, "relationships")
     );
     Promise<List<Operation>> remDependentsOpsPromise = dependentMembersPromise.flatMap(dependents ->
-            sremLeaf(compositeId, node.getEdge().dependents(), dependents, "dependents")
+        sremLeaf(compositeId, node.getEdge().dependents(), dependents, "dependents")
     );
     Promise<List<Operation>> remRelationshipOpsPromise = relatedMembersPromise.flatMap(relateds ->
-            sremLeaf(compositeId, node.getEdge().relationships(), relateds, "relationships")
+        sremLeaf(compositeId, node.getEdge().relationships(), relateds, "relationships")
     );
 
     return storeOp.flatMap(indexOp.promise()).flatMap(o ->
-            addDependentsOpsPromise.flatMap(this::mapListOpsToPromise)
+        addDependentsOpsPromise.flatMap(this::mapListOpsToPromise)
     ).flatMap(o ->
-            addRelationshipOpsPromise.flatMap(this::mapListOpsToPromise)
+        addRelationshipOpsPromise.flatMap(this::mapListOpsToPromise)
     ).flatMap(o -> {
       if (cleanupLeaves) {
         return remDependentsOpsPromise.flatMap(this::mapListOpsToPromise);
@@ -235,118 +233,97 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
   }
 
   private Promise<Set<String>> smembers(String key) {
-    return Promise.<Set<String>>of(d ->
-            Futures.addCallback(connection.smembers(key), new FutureCallback<Set<String>>() {
-              @Override
-              public void onSuccess(Set<String> result) {
-                d.success(result != null ? result : Sets.<String>newHashSet());
-              }
-
-              @Override
-              public void onFailure(Throwable t) {
-                d.error(new RuntimeException("Failed to smembers", t));
-              }
-            }, Execution.current().getEventLoop())
+    return Promise.<Set<String>>async(d ->
+        connection.smembers(key).handleAsync((result, failure) -> {
+          if (failure == null) {
+            d.success(result != null ? result : Sets.<String>newHashSet());
+          } else {
+            d.error(new RuntimeException("Failed to smembers", failure));
+          }
+          return null;
+        }, Execution.current().getEventLoop())
     );
   }
 
   private Operation sadd(String key, String id) {
-    return Promise.<Boolean>of(d ->
-            Futures.addCallback(connection.sadd(key, id), new FutureCallback<Long>() {
-              @Override
-              public void onSuccess(Long result) {
-                d.success(true);
-              }
-
-              @Override
-              public void onFailure(Throwable t) {
-                d.error(new RuntimeException("Failed to sadd data", t));
-              }
-            })
+    return Promise.<Boolean>async(d ->
+        connection.sadd(key, id).handleAsync((result, failure) -> {
+          if (failure == null) {
+            d.success(true);
+          } else {
+            d.error(new RuntimeException("Failed to sadd data", failure));
+          }
+          return null;
+        }, Execution.current().getEventLoop())
     ).operation();
   }
 
   private Operation srem(String key, String id) {
-    return Promise.<Boolean>of(d ->
-            Futures.addCallback(connection.srem(key, id), new FutureCallback<Long>() {
-              @Override
-              public void onSuccess(Long result) {
-                d.success(true);
-              }
-
-              @Override
-              public void onFailure(Throwable t) {
-                d.error(new RuntimeException("Failed to srem data", t));
-              }
-            })
+    return Promise.<Boolean>async(d ->
+        connection.srem(key, id).handleAsync((result, failure) -> {
+          if (failure == null) {
+            d.success(true);
+          } else {
+            d.error(new RuntimeException("Failed to srem data", failure));
+          }
+          return null;
+        }, Execution.current().getEventLoop())
     ).operation();
   }
 
   private Operation hset(String key, String id, String val) {
-    return Promise.<Boolean>of(d ->
-            Futures.addCallback(connection.hset(key, id, val), new FutureCallback<Boolean>() {
-              @Override
-              public void onSuccess(Boolean result) {
-                d.success(true);
-              }
-
-              @Override
-              public void onFailure(Throwable t) {
-                d.error(new RuntimeException("Failed to hset data", t));
-              }
-            }, Execution.current().getEventLoop())
+    return Promise.<Boolean>async(d ->
+        connection.hset(key, id, val).handleAsync((result, failure) -> {
+          if (failure == null) {
+            d.success(true);
+          } else {
+            d.error(new RuntimeException("Failed to hset data", failure));
+          }
+          return null;
+        }, Execution.current().getEventLoop())
     ).operation();
   }
 
   private Promise<Long> hget(String key, String id) {
-    return Promise.<Long>of(d ->
-            Futures.addCallback(connection.hget(key, id), new FutureCallback<String>() {
-              @Override
-              public void onSuccess(String result) {
-                if (result != null) {
-                  d.success(Long.valueOf(result));
-                } else {
-                  d.success(null);
-                }
-              }
-
-              @Override
-              public void onFailure(Throwable t) {
-                d.error(new RuntimeException("Failed to hget data", t));
-              }
-            })
+    return Promise.<Long>async(d ->
+        connection.hget(key, id).handleAsync((result, failure) -> {
+          if (failure == null) {
+            if (result != null) {
+              d.success(Long.valueOf(result));
+            } else {
+              d.success(null);
+            }
+          } else {
+            d.error(new RuntimeException("Failed to hget data", failure));
+          }
+          return null;
+        }, Execution.current().getEventLoop())
     );
   }
 
   private Promise<Boolean> hdel(String key, String id) {
-    return Promise.<Boolean>of(d ->
-            Futures.addCallback(connection.hdel(key, id), new FutureCallback<Long>() {
-              @Override
-              public void onSuccess(Long result) {
-                d.success(true);
-              }
-
-              @Override
-              public void onFailure(Throwable t) {
-                d.error(new RuntimeException("Failed to hdel data", t));
-              }
-            })
+    return Promise.<Boolean>async(d ->
+        connection.hdel(key, id).handleAsync((result, failure) -> {
+          if (failure == null) {
+            d.success(true);
+          } else {
+            d.error(new RuntimeException("Failed to hdel data", failure));
+          }
+          return null;
+        }, Execution.current().getEventLoop())
     );
   }
 
   private Promise<Boolean> del(String key) {
-    return Promise.<Boolean>of(d ->
-            Futures.addCallback(connection.del(key), new FutureCallback<Long>() {
-              @Override
-              public void onSuccess(Long result) {
-                d.success(true);
-              }
-
-              @Override
-              public void onFailure(Throwable t) {
-                d.error(new RuntimeException("Failed to hdel data", t));
-              }
-            })
+    return Promise.<Boolean>async(d ->
+        connection.del(key).handleAsync((result, failure) -> {
+          if (failure == null) {
+            d.success(true);
+          } else {
+            d.error(new RuntimeException("Failed to hdel data", failure));
+          }
+          return null;
+        }, Execution.current().getEventLoop())
     );
   }
 }
