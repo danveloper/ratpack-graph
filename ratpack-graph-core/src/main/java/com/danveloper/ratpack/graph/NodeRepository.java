@@ -2,7 +2,7 @@ package com.danveloper.ratpack.graph;
 
 import ratpack.exec.Operation;
 import ratpack.exec.Promise;
-import ratpack.server.Service;
+import ratpack.service.Service;
 
 import java.util.Set;
 

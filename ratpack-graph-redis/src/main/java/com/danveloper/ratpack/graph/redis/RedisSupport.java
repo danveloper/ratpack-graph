@@ -5,8 +5,8 @@ import com.danveloper.ratpack.graph.NodeProperties;
 import com.lambdaworks.redis.RedisAsyncConnection;
 import com.lambdaworks.redis.RedisClient;
 import com.lambdaworks.redis.RedisURI;
-import ratpack.server.Service;
-import ratpack.server.StartEvent;
+import ratpack.service.Service;
+import ratpack.service.StartEvent;
 
 public class RedisSupport implements Service {
   private final RedisGraphModule.Config config;

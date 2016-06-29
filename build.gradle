@@ -13,7 +13,7 @@ apply plugin: 'artifactory'
 apply plugin: 'com.jfrog.bintray'
 
 ext {
-  ratpackVersion = "1.1.0"
+  ratpackVersion = "1.3.3"
 }
 
 allprojects {
