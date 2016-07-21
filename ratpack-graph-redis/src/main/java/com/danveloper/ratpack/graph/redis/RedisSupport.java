@@ -13,7 +13,7 @@ public class RedisSupport implements Service {
   private final RedisGraphModule.Config config;
   protected RedisAsyncCommands<String, String> connection;
 
-  RedisSupport(RedisGraphModule.Config config) {
+  public RedisSupport(RedisGraphModule.Config config) {
     this.config = config;
   }
 
