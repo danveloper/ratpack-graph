@@ -86,13 +86,17 @@ public class InMemoryNodeRepository implements NodeRepository {
       Node node = nodePropertiesIndex.get(nodeProperties);
       node.getEdge().relationships().forEach(props -> {
         Node related = nodePropertiesIndex.get(props);
-        related.getEdge().removeDependent(nodeProperties);
-        save0(related);
+        if (related != null) {
+          related.getEdge().removeDependent(nodeProperties);
+          save0(related);
+        }
       });
       node.getEdge().dependents().forEach(props -> {
         Node dependent = nodePropertiesIndex.get(props);
-        dependent.getEdge().removeRelationship(nodeProperties);
-        save0(dependent);
+        if (dependent != null) {
+          dependent.getEdge().removeRelationship(nodeProperties);
+          save0(dependent);
+        }
       });
       if (nodeClassifierIndex.containsKey(nodeProperties.getClassifier()) &&
           nodeClassifierIndex.get(nodeProperties.getClassifier()).contains(nodeProperties)) {
