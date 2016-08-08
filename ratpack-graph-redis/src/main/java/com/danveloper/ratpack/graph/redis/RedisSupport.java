@@ -23,7 +23,7 @@ public class RedisSupport implements Service {
     this.connection = redisClient.connect(new Utf8StringCodec()).async();
   }
 
-  private RedisURI getRedisURI() {
+  public RedisURI getRedisURI() {
     RedisURI.Builder builder = RedisURI.Builder.redis(config.getHost());
 
     if (config.getPassword() != null) {
