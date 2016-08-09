@@ -166,4 +166,47 @@ class NodeRepositorySpec extends Specification {
     result.edge.dependents().size() == 1
     result.edge.dependents()[0].id == "foo"
   }
+
+  void "marking a dependent for removal and subsequently readding it should not remove it"() {
+    setup:
+    def dependentProps = new NodeProperties("foo", TEST_GEN)
+
+    when:
+    def node = execControl.yieldSingle {
+      repo.getOrCreate(PROPS)
+    }.valueOrThrow
+
+    and:
+    node.edge.addDependent(dependentProps)
+
+    and:
+    execControl.execute {
+      repo.save(node)
+    }
+
+    and:
+    node = execControl.yieldSingle {
+      repo.get(PROPS)
+    }.valueOrThrow
+
+    and:
+    node.edge.removeDependent(dependentProps)
+
+    and:
+    node.edge.addDependent(dependentProps)
+
+    and:
+    execControl.execute {
+      repo.save(node)
+    }
+
+    and:
+    node = execControl.yieldSingle {
+      repo.get(PROPS)
+    }.valueOrThrow
+
+    then:
+    node.edge.dependents().size() == 1
+    node.edge.dependents()[0].id == "foo"
+  }
 }

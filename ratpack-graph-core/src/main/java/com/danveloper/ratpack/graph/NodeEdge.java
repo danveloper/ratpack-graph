@@ -65,6 +65,9 @@ public class NodeEdge {
    * @param properties the properties of the related node
    */
   public void addRelationship(NodeProperties properties) {
+    if (relationshipsMarkedForRemoval.contains(properties)) {
+      relationshipsMarkedForRemoval.remove(properties);
+    }
     this.relationships.add(properties);
   }
 
@@ -74,6 +77,9 @@ public class NodeEdge {
    * @param properties the properties of the dependent node
    */
   public void addDependent(NodeProperties properties) {
+    if (dependentsMarkedForRemoval.contains(properties)) {
+      dependentsMarkedForRemoval.remove(properties);
+    }
     this.dependents.add(properties);
   }
 
@@ -128,7 +134,7 @@ public class NodeEdge {
    * @return set of NodeProperties pending removal
    */
   public Set<NodeProperties> getRelationshipsMarkedForRemoval() {
-    return relationshipsMarkedForRemoval;
+    return Collections.unmodifiableSet(relationshipsMarkedForRemoval);
   }
 
   /**
@@ -138,7 +144,7 @@ public class NodeEdge {
    * @return set of NodeProperties pending removal
    */
   public Set<NodeProperties> getDependentsMarkedForRemoval() {
-    return dependentsMarkedForRemoval;
+    return Collections.unmodifiableSet(dependentsMarkedForRemoval);
   }
 
   @Override
