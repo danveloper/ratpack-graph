@@ -3,6 +3,7 @@ package com.danveloper.ratpack.graph
 import com.danveloper.ratpack.graph.internal.InMemoryNodeRepository
 import ratpack.test.exec.ExecHarness
 import spock.lang.AutoCleanup
+import spock.lang.Ignore
 import spock.lang.Specification
 
 class NodeRepositorySpec extends Specification {
@@ -96,6 +97,7 @@ class NodeRepositorySpec extends Specification {
     upd2.edge.hasDependent(node1.properties)
   }
 
+  @Ignore("feature deprecated")
   void "should be able to expire nodes by classifier and TTL"() {
     setup:
     def node1 = new Node(PROPS)

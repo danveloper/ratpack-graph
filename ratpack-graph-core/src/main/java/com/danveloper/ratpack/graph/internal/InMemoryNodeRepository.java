@@ -1,6 +1,9 @@
 package com.danveloper.ratpack.graph.internal;
 
-import com.danveloper.ratpack.graph.*;
+import com.danveloper.ratpack.graph.Node;
+import com.danveloper.ratpack.graph.NodeClassifier;
+import com.danveloper.ratpack.graph.NodeProperties;
+import com.danveloper.ratpack.graph.NodeRepository;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import ratpack.exec.Operation;
@@ -9,7 +12,6 @@ import ratpack.exec.Promise;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class InMemoryNodeRepository implements NodeRepository {
   private final Map<NodeProperties, Node> nodePropertiesIndex = Maps.newConcurrentMap();
@@ -106,42 +108,14 @@ public class InMemoryNodeRepository implements NodeRepository {
 
   private Node save0(Node node) {
     if (node != null && node.getProperties() != null && node.getProperties().getId() != null) {
-      Node existing = nodePropertiesIndex.containsKey(node.getProperties()) ? nodePropertiesIndex.get(node.getProperties()) : null;
-      NodeEdge newEdge;
-      if (existing != null) {
-        Set<NodeProperties> updatedDeps = existing.getEdge().dependents().stream().filter(props ->
-            !node.getEdge().getDependentsMarkedForRemoval().contains(props)).collect(Collectors.toSet());
-        Set<NodeProperties> updatedRels = existing.getEdge().relationships().stream().filter(props ->
-            !node.getEdge().getRelationshipsMarkedForRemoval().contains(props)).collect(Collectors.toSet());
-
-        Set<NodeProperties> depsToAdd = node.getEdge().dependents().stream().filter(props ->
-            !existing.getEdge().hasDependent(props)).collect(Collectors.toSet());
-        Set<NodeProperties> relsToAdd = node.getEdge().relationships().stream().filter(props ->
-            !existing.getEdge().hasRelationship(props)).collect(Collectors.toSet());
-
-        Set<NodeProperties> deps = Sets.newHashSet();
-        deps.addAll(updatedDeps);
-        deps.addAll(depsToAdd);
-
-        Set<NodeProperties> rels = Sets.newHashSet();
-        rels.addAll(updatedRels);
-        rels.addAll(relsToAdd);
-
-        newEdge = new NodeEdge(deps, rels);
-      } else {
-        newEdge = new NodeEdge(Sets.newHashSet(node.getEdge().dependents()), Sets.newHashSet(node.getEdge().relationships()));
-      }
-
-      Node updated = new Node(node.getProperties(), newEdge, System.currentTimeMillis());
-
-      nodePropertiesIndex.put(node.getProperties(), updated);
+      nodePropertiesIndex.put(node.getProperties(), node);
       if (!nodeClassifierIndex.containsKey(node.getProperties().getClassifier())) {
         nodeClassifierIndex.put(node.getProperties().getClassifier(), Sets.newConcurrentHashSet());
       }
       if (!nodeClassifierIndex.get(node.getProperties().getClassifier()).contains(node.getProperties())) {
         nodeClassifierIndex.get(node.getProperties().getClassifier()).add(node.getProperties());
       }
-      return updated;
+      return node;
     } else {
       throw new IllegalStateException("Somebody tried to insert an empty node");
     }

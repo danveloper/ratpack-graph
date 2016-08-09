@@ -31,11 +31,8 @@ public class NodeEdge {
   private final Set<NodeProperties> relationships;
   private final Set<NodeProperties> dependents;
 
-  private Set<NodeProperties> relationshipsMarkedForRemoval = Sets.newHashSet();
-  private Set<NodeProperties> dependentsMarkedForRemoval = Sets.newHashSet();
-
   public NodeEdge() {
-    this(Sets.newHashSet(), Sets.newHashSet());
+    this(Sets.newConcurrentHashSet(), Sets.newConcurrentHashSet());
   }
 
   public NodeEdge(Set<NodeProperties> relationships, Set<NodeProperties> dependents) {
@@ -65,9 +62,6 @@ public class NodeEdge {
    * @param properties the properties of the related node
    */
   public void addRelationship(NodeProperties properties) {
-    if (relationshipsMarkedForRemoval.contains(properties)) {
-      relationshipsMarkedForRemoval.remove(properties);
-    }
     this.relationships.add(properties);
   }
 
@@ -77,9 +71,6 @@ public class NodeEdge {
    * @param properties the properties of the dependent node
    */
   public void addDependent(NodeProperties properties) {
-    if (dependentsMarkedForRemoval.contains(properties)) {
-      dependentsMarkedForRemoval.remove(properties);
-    }
     this.dependents.add(properties);
   }
 
@@ -90,7 +81,6 @@ public class NodeEdge {
    */
   public void removeDependent(NodeProperties properties) {
     if (this.dependents.contains(properties)) {
-      this.dependentsMarkedForRemoval.add(properties);
       this.dependents.remove(properties);
     }
   }
@@ -102,7 +92,6 @@ public class NodeEdge {
    */
   public void removeRelationship(NodeProperties properties) {
     if (this.relationships.contains(properties)) {
-      this.relationshipsMarkedForRemoval.add(properties);
       this.relationships.remove(properties);
     }
   }
@@ -125,26 +114,6 @@ public class NodeEdge {
    */
   public boolean hasRelationship(NodeProperties properties) {
     return this.relationships.contains(properties);
-  }
-
-  /**
-   * Gets the set of relationships that have been explicitly marked for removal.
-   * A non-zero size of this collection will inform as to the cleanliness of the current Node's state.
-   *
-   * @return set of NodeProperties pending removal
-   */
-  public Set<NodeProperties> getRelationshipsMarkedForRemoval() {
-    return Collections.unmodifiableSet(relationshipsMarkedForRemoval);
-  }
-
-  /**
-   * Gets the set of dependents that have been explicitly marked for removal.
-   * A non-zero size of this collection will inform as to the cleanliness of the current Node's state.
-   *
-   * @return set of NodeProperties pending removal
-   */
-  public Set<NodeProperties> getDependentsMarkedForRemoval() {
-    return Collections.unmodifiableSet(dependentsMarkedForRemoval);
   }
 
   @Override
