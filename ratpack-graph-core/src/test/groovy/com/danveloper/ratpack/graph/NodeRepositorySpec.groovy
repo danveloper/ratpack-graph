@@ -132,4 +132,38 @@ class NodeRepositorySpec extends Specification {
     then:
     upd.lastAccessTime == lastAccessTime
   }
+
+  void "modifying an old node reference should not invalidate what's happened since"() {
+    when:
+    def node = execControl.yieldSingle {
+      repo.getOrCreate(PROPS)
+    }.valueOrThrow
+
+    and:
+    node.edge.addDependent(new NodeProperties("foo", TEST_GEN))
+
+    and:
+    def node1 = execControl.yieldSingle {
+      repo.get(PROPS)
+    }.valueOrThrow
+
+    and:
+    execControl.execute {
+      repo.save(node)
+    }
+
+    and:
+    execControl.execute {
+      repo.save(node1)
+    }
+
+    and:
+    def result = execControl.yieldSingle {
+      repo.get(PROPS)
+    }.valueOrThrow
+
+    then:
+    result.edge.dependents().size() == 1
+    result.edge.dependents()[0].id == "foo"
+  }
 }
