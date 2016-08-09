@@ -31,6 +31,9 @@ public class NodeEdge {
   private final Set<NodeProperties> relationships;
   private final Set<NodeProperties> dependents;
 
+  private Set<NodeProperties> relationshipsMarkedForRemoval = Sets.newHashSet();
+  private Set<NodeProperties> dependentsMarkedForRemoval = Sets.newHashSet();
+
   public NodeEdge() {
     this(Sets.newHashSet(), Sets.newHashSet());
   }
@@ -81,6 +84,7 @@ public class NodeEdge {
    */
   public void removeDependent(NodeProperties properties) {
     if (this.dependents.contains(properties)) {
+      this.dependentsMarkedForRemoval.add(properties);
       this.dependents.remove(properties);
     }
   }
@@ -92,6 +96,7 @@ public class NodeEdge {
    */
   public void removeRelationship(NodeProperties properties) {
     if (this.relationships.contains(properties)) {
+      this.relationshipsMarkedForRemoval.add(properties);
       this.relationships.remove(properties);
     }
   }
@@ -114,6 +119,26 @@ public class NodeEdge {
    */
   public boolean hasRelationship(NodeProperties properties) {
     return this.relationships.contains(properties);
+  }
+
+  /**
+   * Gets the set of relationships that have been explicitly marked for removal.
+   * A non-zero size of this collection will inform as to the cleanliness of the current Node's state.
+   *
+   * @return set of NodeProperties pending removal
+   */
+  public Set<NodeProperties> getRelationshipsMarkedForRemoval() {
+    return relationshipsMarkedForRemoval;
+  }
+
+  /**
+   * Gets the set of dependents that have been explicitly marked for removal.
+   * A non-zero size of this collection will inform as to the cleanliness of the current Node's state.
+   *
+   * @return set of NodeProperties pending removal
+   */
+  public Set<NodeProperties> getDependentsMarkedForRemoval() {
+    return dependentsMarkedForRemoval;
   }
 
   @Override
