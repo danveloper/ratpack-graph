@@ -1,9 +1,11 @@
 package com.danveloper.ratpack.graph;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -31,8 +33,11 @@ public class NodeEdge {
   private final Set<NodeProperties> relationships;
   private final Set<NodeProperties> dependents;
 
+  private final List<ModifyEvent> relationshipEvents = Lists.newArrayList();
+  private final List<ModifyEvent> dependentEvents = Lists.newArrayList();
+
   public NodeEdge() {
-    this(Sets.newConcurrentHashSet(), Sets.newConcurrentHashSet());
+    this(Sets.newHashSet(), Sets.newHashSet());
   }
 
   public NodeEdge(Set<NodeProperties> relationships, Set<NodeProperties> dependents) {
@@ -62,6 +67,7 @@ public class NodeEdge {
    * @param properties the properties of the related node
    */
   public void addRelationship(NodeProperties properties) {
+    this.relationshipEvents.add(new ModifyEvent(ModifyEvent.EventType.ADD, properties));
     this.relationships.add(properties);
   }
 
@@ -71,6 +77,7 @@ public class NodeEdge {
    * @param properties the properties of the dependent node
    */
   public void addDependent(NodeProperties properties) {
+    this.dependentEvents.add(new ModifyEvent(ModifyEvent.EventType.ADD, properties));
     this.dependents.add(properties);
   }
 
@@ -81,6 +88,7 @@ public class NodeEdge {
    */
   public void removeDependent(NodeProperties properties) {
     if (this.dependents.contains(properties)) {
+      this.dependentEvents.add(new ModifyEvent(ModifyEvent.EventType.REMOVE, properties));
       this.dependents.remove(properties);
     }
   }
@@ -92,6 +100,7 @@ public class NodeEdge {
    */
   public void removeRelationship(NodeProperties properties) {
     if (this.relationships.contains(properties)) {
+      this.relationshipEvents.add(new ModifyEvent(ModifyEvent.EventType.REMOVE, properties));
       this.relationships.remove(properties);
     }
   }
@@ -116,6 +125,14 @@ public class NodeEdge {
     return this.relationships.contains(properties);
   }
 
+  public List<ModifyEvent> getRelationshipEvents() {
+    return relationshipEvents;
+  }
+
+  public List<ModifyEvent> getDependentEvents() {
+    return dependentEvents;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
@@ -134,5 +151,32 @@ public class NodeEdge {
     int result = relationships != null ? relationships.hashCode() : 0;
     result = 31 * result + (dependents != null ? dependents.hashCode() : 0);
     return result;
+  }
+
+  public static class ModifyEvent {
+    public enum EventType {
+      ADD, REMOVE
+    }
+
+    private EventType eventType;
+    private NodeProperties nodeProperties;
+    private final Long modifyTime = System.currentTimeMillis();
+
+    private ModifyEvent(EventType eventType, NodeProperties nodeProperties) {
+      this.eventType = eventType;
+      this.nodeProperties = nodeProperties;
+    }
+
+    public EventType getEventType() {
+      return eventType;
+    }
+
+    public NodeProperties getNodeProperties() {
+      return nodeProperties;
+    }
+
+    public Long getModifyTime() {
+      return modifyTime;
+    }
   }
 }

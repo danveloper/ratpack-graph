@@ -76,10 +76,8 @@ public interface NodeRepository extends Service {
   /**
    * Will expire any nodes that are stored with the matching classifier and have not been accessed in time less than the specified TTL.
    *
-   * @deprecated lastAccessTime is no longer updated on the fly
    * @param classifier the classifier for the nodes to expire
    * @param ttl the Time-to-Live in milliseconds
    */
-  @Deprecated
   Operation expireAll(NodeClassifier classifier, Long ttl);
 }
