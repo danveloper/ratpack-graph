@@ -104,9 +104,9 @@ public class InMemoryNodeRepository implements NodeRepository {
 
   private Node save0(Node node) {
     if (node != null && node.getProperties() != null && node.getProperties().getId() != null) {
-      Long trueLastAccessTime = node.getLastAccessTime();
+      long trueLastAccessTime = node.getLastAccessTime();
       if (nodePropertiesIndex.containsKey(node.getProperties())) {
-        Long existingLastAccessTime = nodePropertiesIndex.get(node.getProperties());
+        long existingLastAccessTime = nodePropertiesIndex.get(node.getProperties());
         if (existingLastAccessTime > trueLastAccessTime) {
           trueLastAccessTime = existingLastAccessTime;
         }
