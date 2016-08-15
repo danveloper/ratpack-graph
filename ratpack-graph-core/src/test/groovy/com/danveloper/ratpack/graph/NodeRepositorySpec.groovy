@@ -1,6 +1,8 @@
 package com.danveloper.ratpack.graph
 
 import com.danveloper.ratpack.graph.internal.InMemoryNodeRepository
+import ratpack.registry.Registry
+import ratpack.service.internal.DefaultEvent
 import ratpack.test.exec.ExecHarness
 import spock.lang.AutoCleanup
 import spock.lang.Ignore
@@ -17,6 +19,9 @@ class NodeRepositorySpec extends Specification {
 
   def setup() {
     repo = new InMemoryNodeRepository()
+    execControl.run {
+      repo.onStart(new DefaultEvent(Registry.empty(), false))
+    }
   }
 
   void "should be able to save and retrieve nodes"() {

@@ -1,19 +1,44 @@
 package com.danveloper.ratpack.graph.internal;
 
 import com.danveloper.ratpack.graph.*;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import ratpack.exec.Execution;
 import ratpack.exec.Operation;
 import ratpack.exec.Promise;
+import ratpack.service.StartEvent;
 
 import java.util.*;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class InMemoryNodeRepository implements NodeRepository {
-  private final Map<NodeProperties, Long> nodePropertiesIndex = Maps.newConcurrentMap();
-  private final Map<NodeProperties, Set<NodeEdge.ModifyEvent>> nodeDependentsIndex = Maps.newConcurrentMap();
-  private final Map<NodeProperties, Set<NodeEdge.ModifyEvent>> nodeRelationshipsIndex = Maps.newConcurrentMap();
-  private final Map<NodeClassifier, Set<NodeProperties>> nodeClassifierIndex = Maps.newConcurrentMap();
+
+  private Map<NodeProperties, Long> nodePropertiesIndex;
+  private Map<NodeProperties, Set<NodeEdge.ModifyEvent>> nodeDependentsIndex;
+  private Map<NodeProperties, Set<NodeEdge.ModifyEvent>> nodeRelationshipsIndex;
+  private Map<NodeClassifier, Set<NodeProperties>> nodeClassifierIndex;
+
+  @Override
+  public void onStart(StartEvent e) {
+    ScheduledExecutorService executor = Execution.current().getController().getExecutor();
+    Cache<NodeProperties, Long> nodePropertiesIndexCache = buildExpiringCache(executor);
+    Cache<NodeProperties, Set<NodeEdge.ModifyEvent>> nodeDependentsIndexCache = buildExpiringCache(executor);
+    Cache<NodeProperties, Set<NodeEdge.ModifyEvent>> nodeRelationshipsIndexCache = buildExpiringCache(executor);
+    Cache<NodeClassifier, Set<NodeProperties>> nodeClassifierIndexCache = buildExpiringCache(executor);
+
+    nodePropertiesIndex = nodePropertiesIndexCache.asMap();
+    nodeDependentsIndex = nodeDependentsIndexCache.asMap();
+    nodeRelationshipsIndex = nodeRelationshipsIndexCache.asMap();
+    nodeClassifierIndex = nodeClassifierIndexCache.asMap();
+  }
+
+  private static <K, V> Cache<K, V> buildExpiringCache(ScheduledExecutorService executor) {
+    return Caffeine.newBuilder().executor(executor).expireAfterAccess(5, TimeUnit.MINUTES).build();
+  }
 
   @Override
   public Operation save(Node node) {
