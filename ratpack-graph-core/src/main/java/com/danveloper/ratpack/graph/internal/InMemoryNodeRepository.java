@@ -3,7 +3,6 @@ package com.danveloper.ratpack.graph.internal;
 import com.danveloper.ratpack.graph.*;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import ratpack.exec.Execution;
 import ratpack.exec.Operation;
@@ -22,22 +21,43 @@ public class InMemoryNodeRepository implements NodeRepository {
   private Map<NodeProperties, Set<NodeEdge.ModifyEvent>> nodeRelationshipsIndex;
   private Map<NodeClassifier, Set<NodeProperties>> nodeClassifierIndex;
 
+  private static class Caches {
+    Cache<NodeProperties, Long> nodePropertiesIndexCache;
+    Cache<NodeProperties, Set<NodeEdge.ModifyEvent>> nodeDependentsIndexCache;
+    Cache<NodeProperties, Set<NodeEdge.ModifyEvent>> nodeRelationshipsIndexCache;
+    Cache<NodeClassifier, Set<NodeProperties>> nodeClassifierIndexCache;
+  }
+
   @Override
   public void onStart(StartEvent e) {
     ScheduledExecutorService executor = Execution.current().getController().getExecutor();
-    Cache<NodeProperties, Long> nodePropertiesIndexCache = buildExpiringCache(executor);
-    Cache<NodeProperties, Set<NodeEdge.ModifyEvent>> nodeDependentsIndexCache = buildExpiringCache(executor);
-    Cache<NodeProperties, Set<NodeEdge.ModifyEvent>> nodeRelationshipsIndexCache = buildExpiringCache(executor);
-    Cache<NodeClassifier, Set<NodeProperties>> nodeClassifierIndexCache = buildExpiringCache(executor);
+    Caches caches = new Caches();
+    caches.nodePropertiesIndexCache = buildExpiringCache(executor).build();
+    caches.nodeClassifierIndexCache = buildExpiringCache(executor).build();
+    caches.nodeDependentsIndexCache = buildExpiringCache(executor)
+        .<NodeProperties, Set<NodeEdge.ModifyEvent>>removalListener((props, deps, cause) -> {
+          if (cause.wasEvicted()) {
+            caches.nodePropertiesIndexCache.invalidate(props);
+            caches.nodeRelationshipsIndexCache.invalidate(props);
+          }
+        }).build();
+    caches.nodeRelationshipsIndexCache = buildExpiringCache(executor)
+        .<NodeProperties, Set<NodeEdge.ModifyEvent>>removalListener((props, deps, cause) -> {
+          if (cause.wasEvicted()) {
+            caches.nodePropertiesIndexCache.invalidate(props);
+            caches.nodeDependentsIndexCache.invalidate(props);
+          }
+        }).build();
 
-    nodePropertiesIndex = nodePropertiesIndexCache.asMap();
-    nodeDependentsIndex = nodeDependentsIndexCache.asMap();
-    nodeRelationshipsIndex = nodeRelationshipsIndexCache.asMap();
-    nodeClassifierIndex = nodeClassifierIndexCache.asMap();
+    nodePropertiesIndex = caches.nodePropertiesIndexCache.asMap();
+    nodeDependentsIndex = caches.nodeDependentsIndexCache.asMap();
+    nodeRelationshipsIndex = caches.nodeRelationshipsIndexCache.asMap();
+    nodeClassifierIndex = caches.nodeClassifierIndexCache.asMap();
   }
 
-  private static <K, V> Cache<K, V> buildExpiringCache(ScheduledExecutorService executor) {
-    return Caffeine.newBuilder().executor(executor).expireAfterAccess(5, TimeUnit.MINUTES).build();
+  @SuppressWarnings("unchecked")
+  private static <K, V> Caffeine<K, V> buildExpiringCache(ScheduledExecutorService executor) {
+    return (Caffeine<K, V>) Caffeine.newBuilder().executor(executor).expireAfterAccess(5, TimeUnit.MINUTES);
   }
 
   @Override
