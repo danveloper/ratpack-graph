@@ -120,6 +120,22 @@ public class InMemoryNodeRepository implements NodeRepository {
     return Operation.noop();
   }
 
+  public Map<NodeProperties, Long> getNodePropertiesIndex() {
+    return nodePropertiesIndex;
+  }
+
+  public Map<NodeProperties, Set<NodeEdge.ModifyEvent>> getNodeDependentsIndex() {
+    return nodeDependentsIndex;
+  }
+
+  public Map<NodeProperties, Set<NodeEdge.ModifyEvent>> getNodeRelationshipsIndex() {
+    return nodeRelationshipsIndex;
+  }
+
+  public Map<NodeClassifier, Set<NodeProperties>> getNodeClassifierIndex() {
+    return nodeClassifierIndex;
+  }
+
   private void remove0(NodeProperties nodeProperties) {
     if (nodePropertiesIndex.containsKey(nodeProperties)) {
       Node node = get(nodeProperties, false);
