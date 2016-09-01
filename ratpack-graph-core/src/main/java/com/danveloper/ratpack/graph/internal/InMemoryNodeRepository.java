@@ -56,7 +56,7 @@ public class InMemoryNodeRepository implements NodeRepository {
   }
 
   @SuppressWarnings("unchecked")
-  private static <K, V> Caffeine<K, V> buildExpiringCache(ScheduledExecutorService executor) {
+  protected <K, V> Caffeine<K, V> buildExpiringCache(ScheduledExecutorService executor) {
     return (Caffeine<K, V>) Caffeine.newBuilder().executor(executor).expireAfterAccess(5, TimeUnit.MINUTES);
   }
 
