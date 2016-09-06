@@ -90,8 +90,6 @@ public class RedisNodeDataRepository extends RedisSupport implements NodeDataRep
           if (failure == null) {
             if (result > 0) {
               d.success(true);
-            } else {
-              d.error(new RuntimeException("Failed to hdel data"));
             }
           } else {
             d.error(new RuntimeException("Failed to hdel data", failure));
