@@ -306,8 +306,6 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
         connection.hdel(key, id).handleAsync((result, failure) -> {
           if (failure == null) {
             d.success(true);
-          } else {
-            d.error(new RuntimeException("Failed to hdel data", failure));
           }
           return null;
         }, Execution.current().getEventLoop())
@@ -319,8 +317,6 @@ public class RedisNodeRepository extends RedisSupport implements NodeRepository 
         connection.del(key).handleAsync((result, failure) -> {
           if (failure == null) {
             d.success(true);
-          } else {
-            d.error(new RuntimeException("Failed to hdel data", failure));
           }
           return null;
         }, Execution.current().getEventLoop())
